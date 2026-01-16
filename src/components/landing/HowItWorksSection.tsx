@@ -25,7 +25,7 @@ const HowItWorksSection = () => {
   const { ref: sectionRef, isVisible: sectionVisible } = useScrollAnimation();
 
   return (
-    <section id="how-it-works" className="py-32 relative" ref={sectionRef}>
+    <section id="how-it-works" className="py-16 relative" ref={sectionRef}>
       <div className="container mx-auto px-6">
         <div className="max-w-6xl mx-auto">
           <div className={`text-center mb-20 scroll-animate-fade-up ${sectionVisible ? 'is-visible' : ''}`}>

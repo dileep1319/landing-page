@@ -2,7 +2,7 @@ import { useScrollAnimation } from "@/hooks/use-scroll-animation";
 
 const CTASection = () => {
   return (
-    <section className="py-32 relative">
+    <section className="py-16 relative">
       <div className="container mx-auto px-6">
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col items-center text-center gap-6">

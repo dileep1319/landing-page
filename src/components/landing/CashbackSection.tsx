@@ -23,7 +23,7 @@ const CashbackSection = () => {
   const { ref: sectionRef, isVisible: sectionVisible } = useScrollAnimation();
 
   return (
-    <section id="rewards" className="py-32 relative bg-grid-pattern" ref={sectionRef}>
+    <section id="rewards" className="py-16 relative bg-grid-pattern" ref={sectionRef}>
       <div className="absolute inset-0 bg-gradient-to-b from-background via-transparent to-background" />
       
       <div className="container mx-auto px-6 relative z-10">

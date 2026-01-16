@@ -23,7 +23,7 @@ const TopDepositorsSection = () => {
   const { ref: sectionRef, isVisible: sectionVisible } = useScrollAnimation();
 
   return (
-    <section className="py-32 relative" ref={sectionRef}>
+    <section className="py-16 relative" ref={sectionRef}>
       <div className="container mx-auto px-6">
         <div className="max-w-6xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-16 items-start">
