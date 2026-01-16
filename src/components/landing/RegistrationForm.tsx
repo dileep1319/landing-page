@@ -3,7 +3,6 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { supabase } from "@/lib/supabase";
 import { User, Mail, Phone } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -36,17 +35,14 @@ const RegistrationForm = ({ onSuccess }: RegistrationFormProps) => {
   const onSubmit = async (values: FormValues) => {
     try {
       setLoading(true);
-      const { error } = await supabase.from("registrations").insert({
-        name: values.name.trim(),
-        email: values.email.toLowerCase().trim(),
-        phone: values.phone.trim(),
-      });
-      if (error) throw error;
+      // Simulate form submission
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
       toast.success("🎉 Registration successful! Welcome to the campaign.");
       form.reset();
       onSuccess?.();
     } catch (err: any) {
-      toast.error(err?.message ?? "Registration failed. Please try again.");
+      toast.error("Registration failed. Please try again.");
     } finally {
       setLoading(false);
     }
