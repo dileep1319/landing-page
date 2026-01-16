@@ -42,7 +42,16 @@ const RulesSection = () => {
               {rules.map((rule, index) => (
                 <div
                   key={rule.number}
-                  className={`p-6 rounded-2xl bg-card border border-border glow-border hover-lift cursor-pointer group scroll-animate-fade-up-delay-${index + 1} ${sectionVisible ? 'is-visible' : ''} hover:border-accent/40 transition-all duration-300`}
+                  className={`p-6 rounded-2xl bg-card border border-border glow-border cursor-pointer group scroll-animate-fade-up-delay-${index + 1} ${sectionVisible ? 'is-visible' : ''} hover:border-accent/40 hover:shadow-lg`}
+                  style={{
+                    transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-4px)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                  }}
                 >
                   <div className="flex items-start gap-3 mb-4">
                     <span className="inline-flex items-center justify-center w-7 h-7 rounded-md bg-accent/20 text-accent text-sm font-semibold">
