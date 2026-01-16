@@ -1,3 +1,5 @@
+import { useScrollAnimation } from "@/hooks/use-scroll-animation";
+
 const rules = [
   {
     number: 1,
@@ -18,14 +20,16 @@ const rules = [
 ];
 
 const RulesSection = () => {
+  const { ref: sectionRef, isVisible: sectionVisible } = useScrollAnimation();
+
   return (
-    <section id="rules" className="py-32 relative bg-grid-pattern">
+    <section id="rules" className="py-32 relative bg-grid-pattern" ref={sectionRef}>
       <div className="absolute inset-0 bg-gradient-to-b from-background via-transparent to-background" />
       
       <div className="container mx-auto px-6 relative z-10">
         <div className="max-w-6xl mx-auto">
           <div className="grid lg:grid-cols-3 gap-16 items-start">
-            <div>
+            <div className={`scroll-animate-fade-up ${sectionVisible ? 'is-visible' : ''}`}>
               <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">
                 Key <span className="text-muted-foreground">Campaign</span> Rules
               </h2>
@@ -35,17 +39,17 @@ const RulesSection = () => {
             </div>
 
             <div className="lg:col-span-2 grid sm:grid-cols-2 gap-6">
-              {rules.map((rule) => (
+              {rules.map((rule, index) => (
                 <div
                   key={rule.number}
-                  className="p-6 rounded-2xl bg-card border border-border glow-border hover-lift cursor-pointer group"
+                  className={`p-6 rounded-2xl bg-card border border-border glow-border hover-lift cursor-pointer group scroll-animate-fade-up-delay-${index + 1} ${sectionVisible ? 'is-visible' : ''} hover:border-accent/40 transition-all duration-300`}
                 >
                   <div className="flex items-start gap-3 mb-4">
                     <span className="inline-flex items-center justify-center w-7 h-7 rounded-md bg-accent/20 text-accent text-sm font-semibold">
                       {rule.number}
                     </span>
                   </div>
-                  <p className="font-medium leading-relaxed group-hover:text-foreground transition-colors">
+                  <p className="font-medium leading-relaxed">
                     {rule.title}
                   </p>
                 </div>

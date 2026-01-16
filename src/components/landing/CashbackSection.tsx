@@ -1,4 +1,5 @@
 import { LayoutGrid, Gift, Award } from "lucide-react";
+import { useScrollAnimation } from "@/hooks/use-scroll-animation";
 
 const features = [
   {
@@ -19,14 +20,16 @@ const features = [
 ];
 
 const CashbackSection = () => {
+  const { ref: sectionRef, isVisible: sectionVisible } = useScrollAnimation();
+
   return (
-    <section id="rewards" className="py-32 relative bg-grid-pattern">
+    <section id="rewards" className="py-32 relative bg-grid-pattern" ref={sectionRef}>
       <div className="absolute inset-0 bg-gradient-to-b from-background via-transparent to-background" />
       
       <div className="container mx-auto px-6 relative z-10">
         <div className="max-w-6xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-16 items-start">
-            <div>
+            <div className={`scroll-animate-fade-left ${sectionVisible ? 'is-visible' : ''}`}>
               <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">
                 Get <span className="shimmer-text">10% Cashback</span> on
                 <br />
@@ -41,7 +44,7 @@ const CashbackSection = () => {
               {features.map((feature, index) => (
                 <div
                   key={index}
-                  className="flex items-center gap-6 group cursor-pointer"
+                  className={`flex items-center gap-6 group cursor-pointer scroll-animate-fade-right scroll-animate-fade-right-delay-${index + 1} ${sectionVisible ? 'is-visible' : ''}`}
                 >
                   <div className="w-16 h-16 rounded-xl bg-accent/10 border border-accent/20 flex items-center justify-center flex-shrink-0 group-hover:bg-accent/20 transition-colors">
                     <feature.icon className="w-7 h-7 text-accent" />

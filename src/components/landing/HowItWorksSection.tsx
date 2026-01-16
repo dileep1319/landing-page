@@ -1,3 +1,5 @@
+import { useScrollAnimation } from "@/hooks/use-scroll-animation";
+
 const steps = [
   {
     number: 1,
@@ -20,11 +22,13 @@ const steps = [
 ];
 
 const HowItWorksSection = () => {
+  const { ref: sectionRef, isVisible: sectionVisible } = useScrollAnimation();
+
   return (
-    <section id="how-it-works" className="py-32 relative">
+    <section id="how-it-works" className="py-32 relative" ref={sectionRef}>
       <div className="container mx-auto px-6">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-20">
+          <div className={`text-center mb-20 scroll-animate-fade-up ${sectionVisible ? 'is-visible' : ''}`}>
             <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">
               How the <span className="text-muted-foreground">Campaign</span> Works
             </h2>
@@ -33,24 +37,34 @@ const HowItWorksSection = () => {
             </p>
           </div>
 
-          {/* Mobile step indicators */}
-          <div className="flex md:hidden items-center justify-center gap-4 mb-10">
-            {steps.map((step) => (
-              <div
-                key={step.number}
-                className="flex flex-col items-center gap-2"
+          {/* Mobile Step Details with integrated numbers */}
+          <div className="md:hidden space-y-8 mb-16">
+            {steps.map((step, index) => (
+              <div 
+                key={step.number} 
+                className={`flex gap-4 items-start scroll-animate-fade-up-delay-${index + 1} ${sectionVisible ? 'is-visible' : ''}`}
               >
-                <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center border border-accent/40">
-                  <span className="text-lg font-bold text-accent">
-                    {step.number}
-                  </span>
+                <div className="flex-shrink-0">
+                  <div className="w-12 h-12 rounded-full bg-accent/20 flex items-center justify-center border border-accent/40">
+                    <span className="text-lg font-bold text-accent">
+                      {step.number}
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold mb-3 group-hover:text-accent transition-colors">
+                    {step.title}
+                  </h3>
+                  <p className="text-muted-foreground leading-relaxed">
+                    {step.description}
+                  </p>
                 </div>
               </div>
             ))}
           </div>
 
           {/* Desktop Chevron Steps */}
-          <div className="hidden md:flex md:flex-row gap-0 mb-16">
+          <div className={`hidden md:flex md:flex-row gap-0 mb-16 scroll-animate-fade-up-delay-1 ${sectionVisible ? 'is-visible' : ''}`}>
             {steps.map((step, index) => (
               <div
                 key={step.number}
@@ -67,10 +81,13 @@ const HowItWorksSection = () => {
             ))}
           </div>
 
-          {/* Step Details */}
-          <div className="grid md:grid-cols-3 gap-8">
-            {steps.map((step) => (
-              <div key={step.number} className="group">
+          {/* Desktop Step Details */}
+          <div className="hidden md:grid md:grid-cols-3 gap-8">
+            {steps.map((step, index) => (
+              <div 
+                key={step.number} 
+                className={`group scroll-animate-fade-up-delay-${index + 2} ${sectionVisible ? 'is-visible' : ''}`}
+              >
                 <h3 className="text-xl font-bold mb-3 group-hover:text-accent transition-colors">
                   {step.title}
                 </h3>

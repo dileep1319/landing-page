@@ -1,4 +1,5 @@
 import { Trophy, Clock, Banknote } from "lucide-react";
+import { useScrollAnimation } from "@/hooks/use-scroll-animation";
 
 const rewards = [
   {
@@ -19,12 +20,14 @@ const rewards = [
 ];
 
 const TopDepositorsSection = () => {
+  const { ref: sectionRef, isVisible: sectionVisible } = useScrollAnimation();
+
   return (
-    <section className="py-32 relative">
+    <section className="py-32 relative" ref={sectionRef}>
       <div className="container mx-auto px-6">
         <div className="max-w-6xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-16 items-start">
-            <div>
+            <div className={`scroll-animate-fade-left ${sectionVisible ? 'is-visible' : ''}`}>
               <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">
                 Extra Reward:{" "}
                 <span className="text-muted-foreground">Top 10 Depositors</span>
@@ -38,7 +41,7 @@ const TopDepositorsSection = () => {
               {rewards.map((reward, index) => (
                 <div
                   key={index}
-                  className="p-6 rounded-2xl bg-card border border-accent/10 glow-border glow-border-gold hover-lift cursor-pointer"
+                  className={`p-6 rounded-2xl bg-card border border-accent/10 glow-border glow-border-gold hover-lift cursor-pointer scroll-animate-scale scroll-animate-scale-delay-${index + 1} ${sectionVisible ? 'is-visible' : ''}`}
                 >
                   <div className="flex items-start gap-4">
                     <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center flex-shrink-0">
