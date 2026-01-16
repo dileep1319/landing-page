@@ -4,17 +4,16 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
+import { User, Mail, Phone } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 
 const schema = z.object({
-  name: z.string().min(2, "Name is required"),
-  email: z.string().email("Enter a valid email"),
-  phone: z.string().min(7, "Phone is required"),
-  team: z.enum(["chiefs", "eagles"], { required_error: "Select your team" }),
+  name: z.string().min(2, "Name must be at least 2 characters").max(50, "Name must be less than 50 characters"),
+  email: z.string().email("Please enter a valid email address"),
+  phone: z.string().min(10, "Please enter a valid phone number").max(15, "Phone number too long"),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -31,7 +30,6 @@ const RegistrationForm = ({ onSuccess }: RegistrationFormProps) => {
       name: "",
       email: "",
       phone: "",
-      team: undefined,
     },
   });
 
@@ -39,96 +37,112 @@ const RegistrationForm = ({ onSuccess }: RegistrationFormProps) => {
     try {
       setLoading(true);
       const { error } = await supabase.from("registrations").insert({
-        name: values.name,
-        email: values.email,
-        phone: values.phone,
-        team: values.team,
+        name: values.name.trim(),
+        email: values.email.toLowerCase().trim(),
+        phone: values.phone.trim(),
       });
       if (error) throw error;
-      toast.success("Registered successfully");
+      toast.success("🎉 Registration successful! Welcome to the campaign.");
       form.reset();
       onSuccess?.();
     } catch (err: any) {
-      toast.error(err?.message ?? "Registration failed");
+      toast.error(err?.message ?? "Registration failed. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <FormField
-          control={form.control}
-          name="name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Name</FormLabel>
-              <FormControl>
-                <Input placeholder="Your full name" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+    <div className="w-full max-w-md mx-auto">
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center gap-2 text-sm font-medium">
+                  <User className="w-4 h-4" />
+                  Full Name
+                </FormLabel>
+                <FormControl>
+                  <Input 
+                    placeholder="John Doe" 
+                    className="h-11 rounded-lg border-border/50 focus:border-accent/50 transition-colors"
+                    {...field} 
+                  />
+                </FormControl>
+                <FormMessage className="text-xs" />
+              </FormItem>
+            )}
+          />
 
-        <FormField
-          control={form.control}
-          name="email"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Email</FormLabel>
-              <FormControl>
-                <Input type="email" placeholder="you@example.com" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center gap-2 text-sm font-medium">
+                  <Mail className="w-4 h-4" />
+                  Email Address
+                </FormLabel>
+                <FormControl>
+                  <Input 
+                    type="email" 
+                    placeholder="john@example.com" 
+                    className="h-11 rounded-lg border-border/50 focus:border-accent/50 transition-colors"
+                    {...field} 
+                  />
+                </FormControl>
+                <FormMessage className="text-xs" />
+              </FormItem>
+            )}
+          />
 
-        <FormField
-          control={form.control}
-          name="phone"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Phone</FormLabel>
-              <FormControl>
-                <Input placeholder="(+1) 555-123-4567" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+          <FormField
+            control={form.control}
+            name="phone"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center gap-2 text-sm font-medium">
+                  <Phone className="w-4 h-4" />
+                  Phone Number
+                </FormLabel>
+                <FormControl>
+                  <Input 
+                    placeholder="+1 (555) 123-4567" 
+                    className="h-11 rounded-lg border-border/50 focus:border-accent/50 transition-colors"
+                    {...field} 
+                  />
+                </FormControl>
+                <FormMessage className="text-xs" />
+              </FormItem>
+            )}
+          />
 
-        <FormField
-          control={form.control}
-          name="team"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Team</FormLabel>
-              <FormControl>
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select team" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="chiefs">Chiefs</SelectItem>
-                    <SelectItem value="eagles">Eagles</SelectItem>
-                  </SelectContent>
-                </Select>
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <div className="flex justify-end">
-          <Button type="submit" className="btn-gold rounded-full px-6" disabled={loading}>
-            {loading ? "Submitting..." : "Register"}
+          <Button 
+            type="submit" 
+            className="w-full h-12 btn-gold gold-glow rounded-full font-semibold text-base transition-all duration-300 hover:scale-[1.02]" 
+            disabled={loading}
+          >
+            {loading ? (
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                Registering...
+              </div>
+            ) : (
+              "Register Now"
+            )}
           </Button>
-        </div>
-      </form>
-    </Form>
+        </form>
+      </Form>
+
+      <div className="mt-6 text-center">
+        <p className="text-xs text-muted-foreground">
+          By registering, you agree to participate in the Super Bowl cashback campaign.
+        </p>
+      </div>
+    </div>
   );
 };
 
