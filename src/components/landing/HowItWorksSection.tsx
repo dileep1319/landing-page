@@ -42,7 +42,7 @@ const HowItWorksSection = () => {
             {steps.map((step, index) => (
               <div 
                 key={step.number} 
-                className={`flex gap-4 items-start scroll-animate-fade-up-delay-${index + 1} ${sectionVisible ? 'is-visible' : ''}`}
+                className={`flex gap-4 items-start scroll-animate-scale scroll-animate-scale-delay-${index + 1} ${sectionVisible ? 'is-visible' : ''}`}
               >
                 <div className="flex-shrink-0">
                   <div className="w-12 h-12 rounded-full bg-accent/20 flex items-center justify-center border border-accent/40">
@@ -86,7 +86,7 @@ const HowItWorksSection = () => {
             {steps.map((step, index) => (
               <div 
                 key={step.number} 
-                className={`group scroll-animate-fade-up-delay-${index + 2} ${sectionVisible ? 'is-visible' : ''}`}
+                className={`group scroll-animate-scale scroll-animate-scale-delay-${index + 2} ${sectionVisible ? 'is-visible' : ''}`}
               >
                 <h3 className="text-xl font-bold mb-3 group-hover:text-accent transition-colors">
                   {step.title}
