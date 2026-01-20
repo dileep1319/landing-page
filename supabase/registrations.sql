@@ -78,3 +78,4 @@ GRANT USAGE ON SCHEMA public TO anon, authenticated;
 GRANT SELECT ON registrations TO authenticated;
 GRANT INSERT ON registrations TO anon;
 GRANT SELECT ON recent_registrations TO authenticated;
+

@@ -3,44 +3,35 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { User, Lock, UserCircle } from "lucide-react";
+import { User, Lock } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { supabase } from "@/lib/supabase";
 
-const schema = z
-  .object({
-    name: z.string().min(2, "Name must be at least 2 characters").max(50, "Name must be less than 50 characters"),
-    username: z.string().min(3, "Username must be at least 3 characters").max(30, "Username must be less than 30 characters"),
-    password: z.string().min(6, "Password must be at least 6 characters"),
-    confirmPassword: z.string().min(6, "Confirm your password"),
-  })
-  .refine((v) => v.password === v.confirmPassword, {
-    message: "Passwords do not match",
-    path: ["confirmPassword"],
-  });
+const schema = z.object({
+  username: z.string().trim().min(1, "Username is required"),
+  password: z.string().min(1, "Password is required"),
+});
 
 type FormValues = z.infer<typeof schema>;
 
-type RegistrationFormProps = {
+type SignInFormProps = {
   onSuccess?: () => void;
 };
 
-const RegistrationForm = ({ onSuccess }: RegistrationFormProps) => {
+const SignInForm = ({ onSuccess }: SignInFormProps) => {
   const [loading, setLoading] = useState(false);
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      name: "",
       username: "",
       password: "",
-      confirmPassword: "",
     },
   });
 
-  // Simple password hashing function (for demo purposes)
+  // Simple password hashing function (same as registration)
   const hashPassword = async (password: string): Promise<string> => {
     const encoder = new TextEncoder();
     const data = encoder.encode(password);
@@ -56,38 +47,23 @@ const RegistrationForm = ({ onSuccess }: RegistrationFormProps) => {
 
       const username = values.username.trim().toLowerCase();
       
-      // Check if username already exists
-      const { data: existingUser } = await supabase
+      // Find user in users table
+      const { data: userData, error: dbError } = await supabase
         .from('users')
-        .select('username')
+        .select('*')
         .eq('username', username)
-        .maybeSingle();
+        .single();
 
-      if (existingUser) {
-        toast.error("This username is already taken. Please choose another one.");
+      if (dbError || !userData) {
+        toast.error("Invalid username or password. Please check your credentials.");
         return;
       }
 
-      // Hash password for storing in users table
+      // Hash provided password and compare with stored hash
       const passwordHash = await hashPassword(values.password);
-
-      // Save user to users table (role defaults to 'user')
-      const { data: userData, error: dbError } = await supabase
-        .from('users')
-        .insert({
-          username: username,
-          password_hash: passwordHash,
-          name: values.name.trim(), // Use name from form
-        })
-        .select()
-        .single();
-
-      if (dbError) {
-        if (dbError.code === '23505') { // Unique constraint violation
-          toast.error("This username is already taken. Please choose another one.");
-        } else {
-          toast.error(`Registration failed: ${dbError.message}`);
-        }
+      
+      if (passwordHash !== userData.password_hash) {
+        toast.error("Invalid username or password. Please check your credentials.");
         return;
       }
 
@@ -97,7 +73,7 @@ const RegistrationForm = ({ onSuccess }: RegistrationFormProps) => {
           data: {
             user_id: userData.id,
             username: username,
-            name: values.name.trim(), // Use name from form
+            name: userData.name,
             role: userData.role ?? 'user',
           }
         }
@@ -109,13 +85,13 @@ const RegistrationForm = ({ onSuccess }: RegistrationFormProps) => {
       }
 
       if (authData.user) {
-        toast.success("🎉 Registration successful! Welcome to BIG MONEY GAMING.");
+        toast.success("🎉 Welcome back!");
         form.reset();
         onSuccess?.();
       }
     } catch (err: any) {
-      console.error("Registration error:", err);
-      toast.error("Registration failed. Please try again.");
+      console.error("Sign in error:", err);
+      toast.error("Sign in failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -125,27 +101,6 @@ const RegistrationForm = ({ onSuccess }: RegistrationFormProps) => {
     <div className="w-full max-w-md mx-auto">
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-          <FormField
-            control={form.control}
-            name="name"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="flex items-center gap-2 text-sm font-medium">
-                  <UserCircle className="w-4 h-4" />
-                  Full Name
-                </FormLabel>
-                <FormControl>
-                  <Input 
-                    placeholder="John Doe" 
-                    className="h-12 rounded-full bg-secondary/20 border-border/60 focus:border-accent/60 focus-visible:ring-0 transition-colors"
-                    {...field} 
-                  />
-                </FormControl>
-                <FormMessage className="text-xs" />
-              </FormItem>
-            )}
-          />
-
           <FormField
             control={form.control}
             name="username"
@@ -179,31 +134,9 @@ const RegistrationForm = ({ onSuccess }: RegistrationFormProps) => {
                 <FormControl>
                   <Input 
                     type="password" 
-                    placeholder="Create a strong password" 
+                    placeholder="Enter your password" 
                     className="h-12 rounded-full bg-secondary/20 border-border/60 focus:border-accent/60 focus-visible:ring-0 transition-colors"
                     {...field} 
-                  />
-                </FormControl>
-                <FormMessage className="text-xs" />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="confirmPassword"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="flex items-center gap-2 text-sm font-medium">
-                  <Lock className="w-4 h-4" />
-                  Confirm Password
-                </FormLabel>
-                <FormControl>
-                  <Input
-                    type="password"
-                    placeholder="Re-enter your password"
-                    className="h-12 rounded-full bg-secondary/20 border-border/60 focus:border-accent/60 focus-visible:ring-0 transition-colors"
-                    {...field}
                   />
                 </FormControl>
                 <FormMessage className="text-xs" />
@@ -219,10 +152,10 @@ const RegistrationForm = ({ onSuccess }: RegistrationFormProps) => {
             {loading ? (
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
-                Registering...
+                Signing In...
               </div>
             ) : (
-              "Register Now"
+              "Sign In"
             )}
           </Button>
         </form>
@@ -230,12 +163,11 @@ const RegistrationForm = ({ onSuccess }: RegistrationFormProps) => {
 
       <div className="mt-6 text-center">
         <p className="text-xs text-muted-foreground">
-          By registering, you agree to participate in the Super Bowl cashback campaign.
+          By signing in, you agree to participate in the Super Bowl cashback campaign.
         </p>
       </div>
     </div>
   );
 };
 
-export default RegistrationForm;
-
+export default SignInForm;

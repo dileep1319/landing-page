@@ -16,10 +16,13 @@ const HeroSection = () => {
           </div>
           
           <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-none mb-8 animate-fade-up-delay-1">
-            Win{" "}
-            <span className="shimmer-text">Mega Cashback</span>
-            <br />
-            This Super Bowl
+            <div className="block">
+              Win{" "}
+              <span className="shimmer-text">Mega Cashback</span>
+            </div>
+            <div className="block">
+              This Super Bowl
+            </div>
           </h1>
           
           <p className="text-xl md:text-2xl text-muted-foreground mb-12 animate-fade-up-delay-2 max-w-2xl mx-auto">

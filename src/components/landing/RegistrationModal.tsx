@@ -7,9 +7,9 @@ const RegistrationModal = () => {
 
   useEffect(() => {
     const onOpen = () => setOpen(true);
-    window.addEventListener("open-registration", onOpen as EventListener);
+    window.addEventListener("open-registration", onOpen);
     return () => {
-      window.removeEventListener("open-registration", onOpen as EventListener);
+      window.removeEventListener("open-registration", onOpen);
     };
   }, []);
 

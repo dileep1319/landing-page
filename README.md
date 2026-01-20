@@ -62,7 +62,67 @@ This project is built with:
 
 ## How can I deploy this project?
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+### Deploying to Vercel
+
+This project is configured for Vercel deployment. Follow these steps:
+
+1. **Push your code to GitHub**
+   ```sh
+   git add .
+   git commit -m "Add Supabase integration"
+   git push origin main
+   ```
+
+2. **Connect to Vercel**
+   - Go to [Vercel Dashboard](https://vercel.com/dashboard)
+   - Click "Add New Project"
+   - Import your GitHub repository
+   - Vercel will auto-detect Vite configuration
+
+3. **Add Environment Variables**
+   In Vercel project settings, add these environment variables:
+   - `VITE_SUPABASE_URL` - Your Supabase project URL
+   - `VITE_SUPABASE_ANON_KEY` - Your Supabase anonymous/public key
+   
+   You can find these in your [Supabase Dashboard](https://app.supabase.com) under:
+   - Project Settings > API > Project URL (for VITE_SUPABASE_URL)
+   - Project Settings > API > anon/public key (for VITE_SUPABASE_ANON_KEY)
+
+4. **Deploy**
+   - Click "Deploy"
+   - Vercel will build and deploy your project
+   - Your app will be live at `https://your-project.vercel.app`
+
+### Local Development Setup
+
+1. **Clone the repository**
+   ```sh
+   git clone <YOUR_GIT_URL>
+   cd <YOUR_PROJECT_NAME>
+   ```
+
+2. **Install dependencies**
+   ```sh
+   npm install
+   ```
+
+3. **Set up environment variables**
+   - Copy `.env.example` to `.env`
+   - Fill in your Supabase credentials:
+     ```env
+     VITE_SUPABASE_URL=https://your-project-ref.supabase.co
+     VITE_SUPABASE_ANON_KEY=your-anon-key-here
+     ```
+
+4. **Run the development server**
+   ```sh
+   npm run dev
+   ```
+
+5. **Build for production**
+   ```sh
+   npm run build
+   ```
 
 ## Can I connect a custom domain to my Lovable project?
 

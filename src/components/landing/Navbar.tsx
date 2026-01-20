@@ -43,12 +43,20 @@ const Navbar = () => {
             Rules
           </a>
         </div>
-        <button
-          className="px-5 py-2 btn-gold text-sm font-semibold rounded-full"
-          onClick={() => window.dispatchEvent(new Event("open-registration"))}
-        >
-          Join Now
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            className="px-4 py-2 text-sm font-semibold rounded-full border border-accent text-accent hover:bg-accent hover:text-background transition-colors"
+            onClick={() => window.dispatchEvent(new Event("open-signin"))}
+          >
+            Sign In
+          </button>
+          <button
+            className="px-5 py-2 btn-gold text-sm font-semibold rounded-full"
+            onClick={() => window.dispatchEvent(new Event("open-signup"))}
+          >
+            Sign Up
+          </button>
+        </div>
       </div>
     </nav>
   );

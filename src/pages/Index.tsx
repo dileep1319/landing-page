@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/lib/supabase";
 import Navbar from "@/components/landing/Navbar";
 import HeroSection from "@/components/landing/HeroSection";
 import TimelineSection from "@/components/landing/TimelineSection";
@@ -8,12 +10,29 @@ import TopDepositorsSection from "@/components/landing/TopDepositorsSection";
 import RulesSection from "@/components/landing/RulesSection";
 import CTASection from "@/components/landing/CTASection";
 import Footer from "@/components/landing/Footer";
-import RegistrationModal from "@/components/landing/RegistrationModal";
+import AuthModal from "@/components/landing/AuthModal";
 
 const Index = () => {
   const [pos, setPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const navigate = useNavigate();
 
   useEffect(() => {
+    // Check if user is already authenticated and redirect to appropriate dashboard
+    const checkAuth = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const role = user.user_metadata?.role;
+        if (role === "super_admin") {
+          navigate('/admin');
+        } else {
+          navigate('/dashboard');
+        }
+        return;
+      }
+    };
+
+    checkAuth();
+
     const handleMove = (e: MouseEvent) => {
       setPos({ x: e.clientX, y: e.clientY });
     };
@@ -21,7 +40,7 @@ const Index = () => {
     return () => {
       window.removeEventListener("mousemove", handleMove);
     };
-  }, []);
+  }, [navigate]);
 
   return (
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
@@ -34,7 +53,7 @@ const Index = () => {
       <RulesSection />
       <CTASection />
       <Footer />
-      <RegistrationModal />
+      <AuthModal />
       <div
         className="fixed pointer-events-none z-50"
         style={{ left: pos.x - 6, top: pos.y - 6 }}
