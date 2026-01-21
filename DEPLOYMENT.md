@@ -107,3 +107,4 @@ git push origin main
 - ✅ RLS policies in Supabase protect your data
 - ✅ Admin routes are protected by authentication checks
 
+

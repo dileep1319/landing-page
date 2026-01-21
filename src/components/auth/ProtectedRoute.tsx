@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
+import { logoutIfStale, touchLastSeen } from "@/lib/sessionTimeout";
 
 export default function ProtectedRoute() {
   const [session, setSession] = useState<Session | null>(null);
@@ -12,6 +13,8 @@ export default function ProtectedRoute() {
     let mounted = true;
 
     const load = async () => {
+      // If the user is coming back after a long gap (tab closed, etc), force logout.
+      await logoutIfStale(supabase);
       const { data, error } = await supabase.auth.getSession();
       if (!mounted) return;
       if (error) {
@@ -31,9 +34,21 @@ export default function ProtectedRoute() {
       setLoading(false);
     });
 
+    // Activity tracking: keep "last seen" fresh while the user is actively using the app.
+    const onActivity = () => touchLastSeen();
+    touchLastSeen();
+    window.addEventListener("mousemove", onActivity, { passive: true });
+    window.addEventListener("keydown", onActivity);
+    window.addEventListener("scroll", onActivity, { passive: true });
+    document.addEventListener("visibilitychange", onActivity);
+
     return () => {
       mounted = false;
       listener.subscription.unsubscribe();
+      window.removeEventListener("mousemove", onActivity);
+      window.removeEventListener("keydown", onActivity);
+      window.removeEventListener("scroll", onActivity);
+      document.removeEventListener("visibilitychange", onActivity);
     };
   }, []);
 

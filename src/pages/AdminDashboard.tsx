@@ -24,6 +24,7 @@ import {
   Edit,
   CheckCircle,
   XCircle,
+  X,
   Settings,
   BarChart3,
   User,
@@ -38,13 +39,12 @@ type Game = {
   title: string;
   team1: string;
   team2: string;
-  odds1: string;
-  odds2: string;
   league: string | null;
   status: string;
   campaign_start_at: string | null;
   campaign_end_at: string | null;
   winner: string | null;
+  finished_at: string | null;
   created_at: string;
 };
 
@@ -89,18 +89,12 @@ const AdminDashboard = () => {
   const [showGameForm, setShowGameForm] = useState(false);
   const [editingGame, setEditingGame] = useState<Game | null>(null);
   const navigate = useNavigate();
+  const [nowTs, setNowTs] = useState(() => Date.now());
 
   const [gameForm, setGameForm] = useState({
     title: "",
     team1: "",
     team2: "",
-    odds1: "",
-    odds2: "",
-    league: "",
-    campaign_start_date: "",
-    campaign_start_time: "",
-    campaign_end_date: "",
-    campaign_end_time: "",
   });
 
   // Campaign dialog state
@@ -124,7 +118,7 @@ const AdminDashboard = () => {
         navigate("/");
         return;
       }
-      
+
       const role = user.user_metadata?.role;
       if (role !== "super_admin") {
         navigate("/dashboard");
@@ -140,6 +134,22 @@ const AdminDashboard = () => {
     loadBets();
     loadUsers();
   }, [navigate]);
+
+  // Keep time-based UI (campaign scheduled/live/ended) fresh without requiring a hard refresh.
+  useEffect(() => {
+    const id = window.setInterval(() => setNowTs(Date.now()), 30_000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const getCampaignState = (game: Game): "not_set" | "scheduled" | "live" | "ended" => {
+    if (!game.campaign_start_at || !game.campaign_end_at) return "not_set";
+    const start = new Date(game.campaign_start_at).getTime();
+    const end = new Date(game.campaign_end_at).getTime();
+    if (Number.isNaN(start) || Number.isNaN(end)) return "not_set";
+    if (nowTs < start) return "scheduled";
+    if (nowTs >= start && nowTs <= end) return "live";
+    return "ended";
+  };
 
   // Auto-scroll to selected time when time picker opens
   useEffect(() => {
@@ -217,7 +227,7 @@ const AdminDashboard = () => {
   };
 
   const handleCreateGame = async () => {
-    if (!gameForm.title || !gameForm.team1 || !gameForm.team2 || !gameForm.odds1 || !gameForm.odds2) {
+    if (!gameForm.title || !gameForm.team1 || !gameForm.team2) {
       toast.error("Please fill all required fields");
       return;
     }
@@ -229,9 +239,7 @@ const AdminDashboard = () => {
       title: gameForm.title,
       team1: gameForm.team1,
       team2: gameForm.team2,
-      odds1: gameForm.odds1,
-      odds2: gameForm.odds2,
-      league: gameForm.league || null,
+      league: "NFL",
       campaign_start_at: null,
       campaign_end_at: null,
       status: "upcoming",
@@ -248,13 +256,6 @@ const AdminDashboard = () => {
       title: "",
       team1: "",
       team2: "",
-      odds1: "",
-      odds2: "",
-      league: "",
-      campaign_start_date: "",
-      campaign_start_time: "",
-      campaign_end_date: "",
-      campaign_end_time: "",
     });
     setShowGameForm(false);
     loadGames();
@@ -349,20 +350,55 @@ const AdminDashboard = () => {
       .eq("game_id", gameId)
       .eq("status", "pending");
 
-    if (gameBets) {
+    if (gameBets && gameBets.length > 0) {
+      let wonBetsCount = 0;
+      let totalPayout = 0;
+
       for (const bet of gameBets) {
         const won = bet.bet_on === winner;
+        let payout = 0;
+
+        if (won) {
+          // Calculate payout based on odds
+          // Odds format: "+150" means win $150 on $100 bet, "-120" means bet $120 to win $100
+          const oddsStr = winner === "team1" ? gameData.odds1 : gameData.odds2;
+          const betAmount = Number(bet.amount);
+
+          // Parse odds
+          if (oddsStr.startsWith('+')) {
+            // Positive odds: +150 means you win $150 on a $100 bet
+            const oddsValue = parseFloat(oddsStr.substring(1));
+            payout = betAmount + (betAmount * oddsValue / 100);
+          } else if (oddsStr.startsWith('-')) {
+            // Negative odds: -120 means you bet $120 to win $100
+            const oddsValue = parseFloat(oddsStr.substring(1));
+            payout = betAmount + (betAmount * 100 / oddsValue);
+          } else {
+            // Decimal odds (e.g., "1.5")
+            const oddsValue = parseFloat(oddsStr);
+            payout = betAmount * oddsValue;
+          }
+
+          wonBetsCount++;
+          totalPayout += payout;
+        }
+
         await supabase
           .from("bets")
           .update({
             status: won ? "won" : "lost",
-            payout: won ? bet.amount * 1.5 : 0, // Simple payout calculation
+            payout: won ? payout : 0,
           })
           .eq("id", bet.id);
       }
+
+      toast.success(
+        `Winner set! ${wonBetsCount} winning bet${wonBetsCount !== 1 ? 's' : ''} settled. Total payout: $${totalPayout.toFixed(2)}`
+      );
+    } else {
+      toast.success("Winner set! No bets to settle.");
     }
 
-    toast.success("Winner set and bets settled!");
     loadGames();
     loadBets();
   };
@@ -387,48 +423,52 @@ const AdminDashboard = () => {
   const totalBets = bets.length;
   const totalBetAmount = bets.reduce((sum, bet) => sum + Number(bet.amount), 0);
   const pendingBets = bets.filter((b) => b.status === "pending").length;
-  const activeGames = games.filter((g) => g.status === "upcoming" || g.status === "live").length;
+  const activeGames = games.filter((g) => {
+    const state = getCampaignState(g);
+    // Consider "active" as scheduled or live campaigns (ended campaigns aren't active).
+    return state === "scheduled" || state === "live";
+  }).length;
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
+    <div className="min-h-screen bg-background text-foreground flex flex-col relative overflow-hidden">
+      {/* Subtle gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-b from-background via-background to-secondary/20 pointer-events-none" />
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-accent/5 blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-accent/5 blur-[120px] rounded-full pointer-events-none" />
       {/* Premium Header */}
-      <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border transition-all duration-300">
+      <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border transition-all duration-300 relative">
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="text-lg font-bold tracking-tight text-foreground">
               BIG MONEY GAMING
             </div>
-            
+
             <div className="hidden md:flex items-center gap-8">
-              <button 
+              <button
                 onClick={() => setActiveTab('games')}
-                className={`text-sm transition-colors border-b-2 border-transparent hover:border-accent pb-1 ${
-                  activeTab === 'games' ? 'text-accent border-accent' : 'text-accent/80 hover:text-accent'
-                }`}
+                className={`text-sm transition-colors border-b-2 border-transparent hover:border-accent pb-1 ${activeTab === 'games' ? 'text-accent border-accent' : 'text-accent/80 hover:text-accent'
+                  }`}
               >
                 Games
               </button>
-              <button 
+              <button
                 onClick={() => setActiveTab('bets')}
-                className={`text-sm transition-colors border-b-2 border-transparent hover:border-accent pb-1 ${
-                  activeTab === 'bets' ? 'text-accent border-accent' : 'text-accent/80 hover:text-accent'
-                }`}
+                className={`text-sm transition-colors border-b-2 border-transparent hover:border-accent pb-1 ${activeTab === 'bets' ? 'text-accent border-accent' : 'text-accent/80 hover:text-accent'
+                  }`}
               >
                 All Bets
               </button>
-              <button 
+              <button
                 onClick={() => setActiveTab('users')}
-                className={`text-sm transition-colors border-b-2 border-transparent hover:border-accent pb-1 ${
-                  activeTab === 'users' ? 'text-accent border-accent' : 'text-accent/80 hover:text-accent'
-                }`}
+                className={`text-sm transition-colors border-b-2 border-transparent hover:border-accent pb-1 ${activeTab === 'users' ? 'text-accent border-accent' : 'text-accent/80 hover:text-accent'
+                  }`}
               >
                 Users
               </button>
-              <button 
+              <button
                 onClick={() => setActiveTab('stats')}
-                className={`text-sm transition-colors border-b-2 border-transparent hover:border-accent pb-1 ${
-                  activeTab === 'stats' ? 'text-accent border-accent' : 'text-accent/80 hover:text-accent'
-                }`}
+                className={`text-sm transition-colors border-b-2 border-transparent hover:border-accent pb-1 ${activeTab === 'stats' ? 'text-accent border-accent' : 'text-accent/80 hover:text-accent'
+                  }`}
               >
                 Statistics
               </button>
@@ -457,11 +497,11 @@ const AdminDashboard = () => {
       </nav>
 
       {/* Main Content */}
-      <main className="flex-1 py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+      <main className="flex-1 py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full relative z-10">
         {/* Summary Cards Grid */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {/* Active Games */}
-          <Card className="p-5 border-border bg-card hover-lift animate-fade-up-delay-1">
+          <Card className="p-5 border-border bg-card hover-lift animate-fade-up-delay-1 glow-border transition-all duration-300">
             <CardContent className="p-0">
               <div className="flex items-center justify-between mb-4">
                 <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400">
@@ -480,7 +520,7 @@ const AdminDashboard = () => {
           </Card>
 
           {/* Total Bets */}
-          <Card className="p-5 border-border bg-card hover-lift animate-fade-up-delay-1">
+          <Card className="p-5 border-border bg-card hover-lift animate-fade-up-delay-1 glow-border transition-all duration-300">
             <CardContent className="p-0">
               <div className="flex items-center justify-between mb-4">
                 <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center text-green-400">
@@ -499,7 +539,7 @@ const AdminDashboard = () => {
           </Card>
 
           {/* Total Bet Amount */}
-          <Card className="p-5 border-border bg-card hover-lift animate-fade-up-delay-1">
+          <Card className="p-5 border-border bg-card hover-lift animate-fade-up-delay-1 glow-border transition-all duration-300">
             <CardContent className="p-0">
               <div className="flex items-center justify-between mb-4">
                 <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center text-accent">
@@ -518,7 +558,7 @@ const AdminDashboard = () => {
           </Card>
 
           {/* Pending Bets */}
-          <Card className="p-5 border-yellow-400/30 bg-card hover-lift animate-fade-up-delay-1 shadow-[0_0_20px_rgba(250,204,21,0.05)]">
+          <Card className="p-5 border-yellow-400/30 bg-card hover-lift animate-fade-up-delay-1 shadow-[0_0_20px_rgba(250,204,21,0.05)] glow-border transition-all duration-300">
             <CardContent className="p-0">
               <div className="flex items-center justify-between mb-4">
                 <div className="w-10 h-10 rounded-lg bg-yellow-400/10 flex items-center justify-center text-yellow-400">
@@ -541,11 +581,10 @@ const AdminDashboard = () => {
         <div className="flex gap-4 border-b border-border mb-6 animate-fade-up-delay-2">
           <button
             onClick={() => setActiveTab('games')}
-            className={`pb-3 px-1 font-medium transition-colors relative ${
-              activeTab === 'games'
-                ? 'text-accent'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
+            className={`pb-3 px-1 font-medium transition-colors relative ${activeTab === 'games'
+              ? 'text-accent'
+              : 'text-muted-foreground hover:text-foreground'
+              }`}
           >
             <div className="flex items-center gap-2">
               <Gamepad2 className="w-4 h-4" />
@@ -557,11 +596,10 @@ const AdminDashboard = () => {
           </button>
           <button
             onClick={() => setActiveTab('bets')}
-            className={`pb-3 px-1 font-medium transition-colors relative ${
-              activeTab === 'bets'
-                ? 'text-accent'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
+            className={`pb-3 px-1 font-medium transition-colors relative ${activeTab === 'bets'
+              ? 'text-accent'
+              : 'text-muted-foreground hover:text-foreground'
+              }`}
           >
             <div className="flex items-center gap-2">
               <DollarSign className="w-4 h-4" />
@@ -573,11 +611,10 @@ const AdminDashboard = () => {
           </button>
           <button
             onClick={() => setActiveTab('users')}
-            className={`pb-3 px-1 font-medium transition-colors relative ${
-              activeTab === 'users'
-                ? 'text-accent'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
+            className={`pb-3 px-1 font-medium transition-colors relative ${activeTab === 'users'
+              ? 'text-accent'
+              : 'text-muted-foreground hover:text-foreground'
+              }`}
           >
             <div className="flex items-center gap-2">
               <Users className="w-4 h-4" />
@@ -589,11 +626,10 @@ const AdminDashboard = () => {
           </button>
           <button
             onClick={() => setActiveTab('stats')}
-            className={`pb-3 px-1 font-medium transition-colors relative ${
-              activeTab === 'stats'
-                ? 'text-accent'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
+            className={`pb-3 px-1 font-medium transition-colors relative ${activeTab === 'stats'
+              ? 'text-accent'
+              : 'text-muted-foreground hover:text-foreground'
+              }`}
           >
             <div className="flex items-center gap-2">
               <BarChart3 className="w-4 h-4" />
@@ -611,88 +647,18 @@ const AdminDashboard = () => {
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold tracking-tight">Manage Games</h2>
               <Button
-                onClick={() => setShowGameForm(!showGameForm)}
-                className="bg-accent hover:bg-accent/80 text-black font-semibold"
+                onClick={() => setShowGameForm(true)}
+                className="btn-gold gold-glow font-semibold transition-all hover:scale-105"
               >
                 <Plus className="w-4 h-4 mr-2" />
-                {showGameForm ? "Cancel" : "Create New Game"}
+                Create New Game
               </Button>
             </div>
-
-            {/* Create Game Form */}
-            {showGameForm && (
-              <Card className="border-border/60 bg-card">
-                <CardHeader>
-                  <CardTitle>Create New Game</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label>Game Title</Label>
-                      <Input
-                        placeholder="Chiefs vs Bills"
-                        value={gameForm.title}
-                        onChange={(e) => setGameForm({ ...gameForm, title: e.target.value })}
-                        className="h-12 bg-secondary/20 border-border/60 focus:border-accent/60 focus-visible:ring-0 transition-colors text-foreground"
-                      />
-                    </div>
-                    <div>
-                      <Label>League</Label>
-                      <Input
-                        placeholder="NFL"
-                        value={gameForm.league}
-                        onChange={(e) => setGameForm({ ...gameForm, league: e.target.value })}
-                        className="h-12 bg-secondary/20 border-border/60 focus:border-accent/60 focus-visible:ring-0 transition-colors text-foreground"
-                      />
-                    </div>
-                    <div>
-                      <Label>Team 1</Label>
-                      <Input
-                        placeholder="Kansas City Chiefs"
-                        value={gameForm.team1}
-                        onChange={(e) => setGameForm({ ...gameForm, team1: e.target.value })}
-                        className="h-12 bg-secondary/20 border-border/60 focus:border-accent/60 focus-visible:ring-0 transition-colors text-foreground"
-                      />
-                    </div>
-                    <div>
-                      <Label>Team 2</Label>
-                      <Input
-                        placeholder="Buffalo Bills"
-                        value={gameForm.team2}
-                        onChange={(e) => setGameForm({ ...gameForm, team2: e.target.value })}
-                        className="h-12 bg-secondary/20 border-border/60 focus:border-accent/60 focus-visible:ring-0 transition-colors text-foreground"
-                      />
-                    </div>
-                    <div>
-                      <Label>Odds Team 1</Label>
-                      <Input
-                        placeholder="+150"
-                        value={gameForm.odds1}
-                        onChange={(e) => setGameForm({ ...gameForm, odds1: e.target.value })}
-                        className="h-12 bg-secondary/20 border-border/60 focus:border-accent/60 focus-visible:ring-0 transition-colors text-foreground"
-                      />
-                    </div>
-                    <div>
-                      <Label>Odds Team 2</Label>
-                      <Input
-                        placeholder="-120"
-                        value={gameForm.odds2}
-                        onChange={(e) => setGameForm({ ...gameForm, odds2: e.target.value })}
-                        className="h-12 bg-secondary/20 border-border/60 focus:border-accent/60 focus-visible:ring-0 transition-colors text-foreground"
-                      />
-                    </div>
-                  </div>
-                  <Button onClick={handleCreateGame} className="w-full bg-accent hover:bg-accent/80 text-black">
-                    Create Game
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
 
             {/* Games List */}
             <div className="space-y-4">
               {games.map((game) => (
-                <Card key={game.id} className="border-border/60 hover:border-accent/30 hover-lift bg-card animate-fade-up-delay-3">
+                <Card key={game.id} className="border-border/60 hover:border-accent/30 hover-lift bg-card animate-fade-up-delay-3 glow-border transition-all duration-300">
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between mb-4">
                       <div>
@@ -701,17 +667,42 @@ const AdminDashboard = () => {
                           <Badge className="bg-accent/20 text-accent border-accent/30">
                             {game.league || "NFL"}
                           </Badge>
-                          <Badge
-                            className={
-                              game.status === "live"
-                                ? "bg-red-500/20 text-red-400 border-red-500/30"
-                                : game.status === "finished"
-                                ? "bg-gray-500/20 text-gray-400 border-gray-500/30"
-                                : "bg-green-500/20 text-green-400 border-green-500/30"
+                          {(() => {
+                            const state = getCampaignState(game);
+                            if (game.status === "finished") {
+                              return (
+                                <Badge className="bg-gray-500/20 text-gray-400 border-gray-500/30">
+                                  finished
+                                </Badge>
+                              );
                             }
-                          >
-                            {game.status}
-                          </Badge>
+                            if (state === "live") {
+                              return (
+                                <Badge className="bg-red-500/20 text-red-400 border-red-500/30">
+                                  live
+                                </Badge>
+                              );
+                            }
+                            if (state === "ended") {
+                              return (
+                                <Badge className="bg-gray-500/20 text-gray-300 border-gray-500/30">
+                                  campaign ended
+                                </Badge>
+                              );
+                            }
+                            if (state === "scheduled") {
+                              return (
+                                <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
+                                  upcoming
+                                </Badge>
+                              );
+                            }
+                            return (
+                              <Badge className="bg-muted/20 text-muted-foreground border-border/40">
+                                draft
+                              </Badge>
+                            );
+                          })()}
                         </div>
                       </div>
                     </div>
@@ -720,12 +711,10 @@ const AdminDashboard = () => {
                       <div>
                         <p className="text-sm text-muted-foreground">Team 1</p>
                         <p className="font-semibold">{game.team1}</p>
-                        <p className="text-sm text-accent">Odds: {game.odds1}</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Team 2</p>
                         <p className="font-semibold">{game.team2}</p>
-                        <p className="text-sm text-accent">Odds: {game.odds2}</p>
                       </div>
                     </div>
 
@@ -736,42 +725,78 @@ const AdminDashboard = () => {
                       </span>
                     </div>
 
-                    <div className="flex gap-2 flex-wrap items-center">
+                    <div className="flex gap-2 flex-wrap items-center relative z-10 pointer-events-auto">
                       {!game.campaign_start_at && !game.campaign_end_at && (
                         <Button
                           size="sm"
                           onClick={() => handleOpenCampaignDialog(game)}
-                          className="bg-accent hover:bg-accent/80 text-black"
+                          className="btn-gold gold-glow transition-all hover:scale-105"
                         >
                           <Calendar className="w-4 h-4 mr-1" />
                           Start Campaign
                         </Button>
                       )}
-                      {game.campaign_start_at && !game.winner && (
-                        <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">
-                          Campaign Scheduled
-                        </Badge>
-                      )}
-                      {game.status === "live" && (
-                        <>
-                          <Button
-                            size="sm"
-                            onClick={() => handleSetWinner(game.id, "team1")}
-                            className="bg-accent hover:bg-accent/80 text-black"
-                          >
-                            <CheckCircle className="w-4 h-4 mr-1" />
-                            {game.team1} Wins
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={() => handleSetWinner(game.id, "team2")}
-                            className="bg-accent hover:bg-accent/80 text-black"
-                          >
-                            <CheckCircle className="w-4 h-4 mr-1" />
-                            {game.team2} Wins
-                          </Button>
-                        </>
-                      )}
+                      {(() => {
+                        const state = getCampaignState(game);
+                        if (game.winner) return null;
+                        if (state === "scheduled") {
+                          return (
+                            <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">
+                              Campaign Scheduled
+                            </Badge>
+                          );
+                        }
+                        if (state === "live") {
+                          return (
+                            <Badge className="bg-red-500/20 text-red-400 border-red-500/30">
+                              Campaign Live
+                            </Badge>
+                          );
+                        }
+                        if (state === "ended") {
+                          return (
+                            <Badge className="bg-gray-500/20 text-gray-300 border-gray-500/30">
+                              Campaign Ended
+                            </Badge>
+                          );
+                        }
+                        return null;
+                      })()}
+                      {(() => {
+                        const state = getCampaignState(game);
+                        // Show winner selection buttons when campaign has ended and no winner is set yet
+                        if (state === "ended" && !game.winner) {
+                          return (
+                            <>
+                              <Button
+                                size="sm"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  handleSetWinner(game.id, "team1");
+                                }}
+                                className="btn-gold gold-glow transition-all hover:scale-105 relative z-20"
+                              >
+                                <CheckCircle className="w-4 h-4 mr-1" />
+                                {game.team1} Wins
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  handleSetWinner(game.id, "team2");
+                                }}
+                                className="btn-gold gold-glow transition-all hover:scale-105 relative z-20"
+                              >
+                                <CheckCircle className="w-4 h-4 mr-1" />
+                                {game.team2} Wins
+                              </Button>
+                            </>
+                          );
+                        }
+                        return null;
+                      })()}
                       {game.winner && (
                         <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
                           Winner: {game.winner === "team1" ? game.team1 : game.team2}
@@ -791,7 +816,7 @@ const AdminDashboard = () => {
             <h2 className="text-2xl font-bold tracking-tight">All Bets</h2>
             <div className="space-y-4">
               {bets.map((bet) => (
-                <Card key={bet.id} className="border-border/60 bg-card hover-lift animate-fade-up-delay-3">
+                <Card key={bet.id} className="border-border/60 bg-card hover-lift animate-fade-up-delay-3 glow-border transition-all duration-300">
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div>
@@ -810,8 +835,8 @@ const AdminDashboard = () => {
                           bet.status === "won"
                             ? "bg-green-500/20 text-green-400 border-green-500/30"
                             : bet.status === "lost"
-                            ? "bg-red-500/20 text-red-400 border-red-500/30"
-                            : "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
+                              ? "bg-red-500/20 text-red-400 border-red-500/30"
+                              : "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
                         }
                       >
                         {bet.status}
@@ -833,7 +858,7 @@ const AdminDashboard = () => {
             <h2 className="text-2xl font-bold tracking-tight">All Users</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {allUsers.map((user) => (
-                <Card key={user.id} className="border-border/60 bg-card hover-lift animate-fade-up-delay-3">
+                <Card key={user.id} className="border-border/60 bg-card hover-lift animate-fade-up-delay-3 glow-border transition-all duration-300">
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between mb-2">
                       <div>
@@ -872,7 +897,7 @@ const AdminDashboard = () => {
           <div className="space-y-6 animate-fade-up-delay-2">
             <h2 className="text-2xl font-bold tracking-tight">Statistics</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card className="bg-card hover-lift animate-fade-up-delay-3">
+              <Card className="bg-card hover-lift animate-fade-up-delay-3 glow-border transition-all duration-300">
                 <CardHeader>
                   <CardTitle>Game Statistics</CardTitle>
                 </CardHeader>
@@ -883,7 +908,7 @@ const AdminDashboard = () => {
                   <p className="text-muted-foreground">Finished: {games.filter((g) => g.status === "finished").length}</p>
                 </CardContent>
               </Card>
-              <Card className="bg-card hover-lift animate-fade-up-delay-3">
+              <Card className="bg-card hover-lift animate-fade-up-delay-3 glow-border transition-all duration-300">
                 <CardHeader>
                   <CardTitle>Bet Statistics</CardTitle>
                 </CardHeader>
@@ -962,7 +987,7 @@ const AdminDashboard = () => {
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-56 p-0 bg-popover border-border shadow-lg" align="start">
-                    <div 
+                    <div
                       className="max-h-64 overflow-y-auto py-2 custom-scrollbar"
                       style={{
                         scrollBehavior: 'smooth',
@@ -986,10 +1011,9 @@ const AdminDashboard = () => {
                             hover:bg-accent/10 hover:border-accent/50
                             hover:text-accent
                             active:bg-accent/20
-                            ${
-                              campaignStartTime === option.value 
-                                ? "bg-accent/20 text-accent border-l-accent font-semibold" 
-                                : "text-foreground"
+                            ${campaignStartTime === option.value
+                              ? "bg-accent/20 text-accent border-l-accent font-semibold"
+                              : "text-foreground"
                             }
                           `}
                           onClick={() => {
@@ -1064,7 +1088,7 @@ const AdminDashboard = () => {
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-56 p-0 bg-popover border-border shadow-lg" align="start">
-                    <div 
+                    <div
                       ref={endTimeScrollRef}
                       className="max-h-64 overflow-y-auto py-2 custom-scrollbar"
                       style={{
@@ -1089,10 +1113,9 @@ const AdminDashboard = () => {
                             hover:bg-accent/10 hover:border-accent/50
                             hover:text-accent
                             active:bg-accent/20
-                            ${
-                              campaignEndTime === option.value 
-                                ? "bg-accent/20 text-accent border-l-accent font-semibold" 
-                                : "text-foreground"
+                            ${campaignEndTime === option.value
+                              ? "bg-accent/20 text-accent border-l-accent font-semibold"
+                              : "text-foreground"
                             }
                           `}
                           onClick={() => {
@@ -1119,9 +1142,69 @@ const AdminDashboard = () => {
             </Button>
             <Button
               onClick={handleStartCampaign}
-              className="bg-accent hover:bg-accent/80 text-black"
+              className="btn-gold gold-glow transition-all hover:scale-105"
             >
               Start Campaign
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Game Dialog */}
+      <Dialog open={showGameForm} onOpenChange={setShowGameForm}>
+        <DialogContent className="sm:max-w-[500px] bg-card border-border">
+          <DialogHeader>
+            <DialogTitle>Create New Game</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label htmlFor="game-title">Game Title</Label>
+              <Input
+                id="game-title"
+                placeholder="Chiefs vs Bills"
+                value={gameForm.title}
+                onChange={(e) => setGameForm({ ...gameForm, title: e.target.value })}
+                className="h-12 bg-secondary/20 border-border/60 focus:border-accent/60 focus-visible:ring-0 transition-colors text-foreground"
+              />
+            </div>
+            <div>
+              <Label htmlFor="team1">Team 1</Label>
+              <Input
+                id="team1"
+                placeholder="Kansas City Chiefs"
+                value={gameForm.team1}
+                onChange={(e) => setGameForm({ ...gameForm, team1: e.target.value })}
+                className="h-12 bg-secondary/20 border-border/60 focus:border-accent/60 focus-visible:ring-0 transition-colors text-foreground"
+              />
+            </div>
+            <div>
+              <Label htmlFor="team2">Team 2</Label>
+              <Input
+                id="team2"
+                placeholder="Buffalo Bills"
+                value={gameForm.team2}
+                onChange={(e) => setGameForm({ ...gameForm, team2: e.target.value })}
+                className="h-12 bg-secondary/20 border-border/60 focus:border-accent/60 focus-visible:ring-0 transition-colors text-foreground"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowGameForm(false);
+                setGameForm({ title: "", team1: "", team2: "" });
+              }}
+              className="border-border/60 text-muted-foreground hover:border-border hover:bg-secondary/50 hover:text-foreground transition-all flex items-center gap-2"
+            >
+              <X className="w-4 h-4" />
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreateGame}
+              className="btn-gold gold-glow transition-all hover:scale-105"
+            >
+              Create Game
             </Button>
           </DialogFooter>
         </DialogContent>

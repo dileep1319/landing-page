@@ -187,10 +187,16 @@ const Dashboard = () => {
     navigate("/", { replace: true });
   };
 
-  const handleBet = (gameId: number, team: string) => {
+  const handleBet = (gameId: number, team: string, e?: React.MouseEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    
     const allGames = [...liveGames, ...upcomingGames];
     const game = allGames.find((g) => g.id === gameId);
-    if (!game) return;
+    if (!game) {
+      console.error("Game not found:", gameId);
+      return;
+    }
 
     // Check if campaign window is still valid
     const now = new Date();
@@ -335,8 +341,10 @@ const Dashboard = () => {
   const averageStake = totalBets > 0 ? totalStaked / totalBets : 0;
   
   // Calculate dynamic balance based on actual bet activity
-  // Starting balance: Default $1000 for new users, or from user metadata if set
-  const startingBalance = user.user_metadata?.starting_balance || 1000;
+  // Starting balance: use user metadata if set, otherwise default to $0.00
+  // (We don't want to show "fake" money for users who never deposited / never bet.)
+  const startingBalanceRaw = user.user_metadata?.starting_balance;
+  const startingBalance = Number(startingBalanceRaw ?? 0) || 0;
   
   // Calculate available balance:
   // Starting balance + Total payouts received - Total amount staked (including pending bets)
@@ -361,9 +369,13 @@ const Dashboard = () => {
   
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
+    <div className="min-h-screen bg-background text-foreground flex flex-col relative overflow-hidden">
+      {/* Subtle gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-b from-background via-background to-secondary/20 pointer-events-none" />
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-accent/5 blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-accent/5 blur-[120px] rounded-full pointer-events-none" />
       {/* Premium Header */}
-      <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border transition-all duration-300">
+      <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border transition-all duration-300 relative">
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="text-lg font-bold tracking-tight text-foreground">
@@ -393,10 +405,10 @@ const Dashboard = () => {
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-full bg-secondary border border-border flex items-center justify-center text-foreground">
                   <User className="w-4 h-4" />
-                </div>
+              </div>
                 <div className="text-right hidden sm:block">
                   <div className="text-sm font-semibold text-foreground">{user.user_metadata?.name || user.user_metadata?.username || 'Player'}</div>
-                </div>
+            </div>
               </div>
               <Button 
                 variant="outline" 
@@ -412,11 +424,11 @@ const Dashboard = () => {
       </nav>
 
       {/* Main Content */}
-      <main className="flex-1 py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+      <main className="flex-1 py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full relative z-10">
         
         {/* Hero: Balance Display */}
         <section className="mb-8 animate-fade-up">
-          <Card className="p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 overflow-hidden relative border-border bg-card hover-lift">
+          <Card className="p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 overflow-hidden relative border-accent/20 bg-card hover-lift glow-border-gold shadow-[0_0_30px_rgba(255,215,0,0.08)]">
             {/* Decorative Background Glow */}
             <div className="absolute -top-24 -right-24 w-64 h-64 bg-accent/10 blur-[80px] rounded-full pointer-events-none"></div>
             
@@ -448,32 +460,32 @@ const Dashboard = () => {
                     Last bet {format(new Date(userBets[0].created_at), "MMM dd")}
                   </span>
                 )}
-              </div>
-            </div>
+        </div>
+      </div>
 
             <div className="flex items-center gap-3 relative z-10">
               <Button 
                 variant="outline"
-                className="px-6 py-3 rounded-xl border-border text-foreground hover:bg-foreground/5 hover:text-foreground transition-colors flex items-center gap-2"
+                className="px-6 py-3 rounded-xl border-accent/30 text-foreground hover:bg-accent/10 hover:border-accent hover:text-accent transition-all hover:scale-105 flex items-center gap-2"
               >
                 <ArrowUpRight className="w-4 h-4" />
                 <span>Withdraw</span>
               </Button>
-            </div>
+        </div>
           </Card>
         </section>
 
         {/* Summary Cards Grid */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {/* Total Bets */}
-          <Card className="p-5 border-border bg-card hover-lift animate-fade-up-delay-1">
+          <Card className="p-5 border-border bg-card hover-lift animate-fade-up-delay-1 glow-border transition-all duration-300">
             <CardContent className="p-0">
               <div className="flex items-center justify-between mb-4">
                 <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400">
                   <Ticket className="w-5 h-5" />
                 </div>
                 <span className="text-[10px] text-muted-foreground font-bold bg-secondary px-2 py-0.5 rounded uppercase">All Time</span>
-              </div>
+                </div>
               <h3 className="text-muted-foreground text-xs font-semibold uppercase tracking-wider">Total Bets</h3>
               <div className="flex items-baseline justify-between mt-1">
                 <p className="text-2xl font-bold text-foreground">{totalBets}</p>
@@ -485,14 +497,14 @@ const Dashboard = () => {
           </Card>
 
           {/* Total Wins */}
-          <Card className="p-5 border-border bg-card hover-lift animate-fade-up-delay-1">
+          <Card className="p-5 border-border bg-card hover-lift animate-fade-up-delay-1 glow-border transition-all duration-300">
             <CardContent className="p-0">
               <div className="flex items-center justify-between mb-4">
                 <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center text-green-400">
                   <Trophy className="w-5 h-5" />
                 </div>
                 <span className="text-[10px] text-muted-foreground font-bold bg-secondary px-2 py-0.5 rounded uppercase">Performance</span>
-              </div>
+                </div>
               <h3 className="text-muted-foreground text-xs font-semibold uppercase tracking-wider">Total Wins</h3>
               <div className="flex items-baseline justify-between mt-1">
                 <p className="text-2xl font-bold text-foreground">{wonBets.length}</p>
@@ -504,14 +516,14 @@ const Dashboard = () => {
           </Card>
 
           {/* Total Losses */}
-          <Card className="p-5 border-border bg-card hover-lift animate-fade-up-delay-1">
+          <Card className="p-5 border-border bg-card hover-lift animate-fade-up-delay-1 glow-border transition-all duration-300">
             <CardContent className="p-0">
               <div className="flex items-center justify-between mb-4">
                 <div className="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center text-red-400">
                   <TrendingDown className="w-5 h-5" />
                 </div>
                 <span className="text-[10px] text-muted-foreground font-bold bg-secondary px-2 py-0.5 rounded uppercase">Risk</span>
-              </div>
+                </div>
               <h3 className="text-muted-foreground text-xs font-semibold uppercase tracking-wider">Total Losses</h3>
               <div className="flex items-baseline justify-between mt-1">
                 <p className="text-2xl font-bold text-foreground">{lostBets.length}</p>
@@ -523,7 +535,7 @@ const Dashboard = () => {
           </Card>
 
           {/* Net Profit/Loss */}
-          <Card className="p-5 border-accent/30 bg-card hover-lift animate-fade-up-delay-1 shadow-[0_0_20px_rgba(255,215,0,0.05)]">
+          <Card className="p-5 border-accent/30 bg-card hover-lift animate-fade-up-delay-1 shadow-[0_0_20px_rgba(255,215,0,0.05)] glow-border-gold transition-all duration-300">
             <CardContent className="p-0">
               <div className="flex items-center justify-between mb-4">
                 <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center text-accent">
@@ -532,7 +544,7 @@ const Dashboard = () => {
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${netProfit > 0 ? 'text-green-400 bg-green-500/10' : 'text-muted-foreground bg-secondary'}`}>
                   {netProfit > 0 ? 'Profit' : 'Loss'}
                 </span>
-              </div>
+                </div>
               <h3 className="text-muted-foreground text-xs font-semibold uppercase tracking-wider">Net Profit</h3>
               <div className="flex items-baseline justify-between mt-1">
                 <p className={`text-2xl font-bold ${netProfit > 0 ? 'text-green-400' : netProfit < 0 ? 'text-red-400' : 'text-foreground'}`}>
@@ -548,44 +560,44 @@ const Dashboard = () => {
 
         {/* Games Section with Tabs */}
         <div className="space-y-6 animate-fade-up-delay-2">
-              <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xl font-bold text-foreground">Available Games</h3>
+          </div>
+          
+          {/* Tab Navigation */}
+          <div className="flex gap-4 border-b border-border">
+            <button
+              onClick={() => setActiveTab('live')}
+              className={`pb-3 px-1 font-medium transition-colors relative ${
+                activeTab === 'live' 
+                  ? 'text-accent' 
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${activeTab === 'live' ? 'bg-red-500 animate-pulse' : 'bg-muted-foreground'}`}></div>
+                Live Games
               </div>
-              
-              {/* Tab Navigation */}
-              <div className="flex gap-4 border-b border-border">
-                <button
-                  onClick={() => setActiveTab('live')}
-                  className={`pb-3 px-1 font-medium transition-colors relative ${
-                    activeTab === 'live' 
-                      ? 'text-accent' 
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${activeTab === 'live' ? 'bg-red-500 animate-pulse' : 'bg-muted-foreground'}`}></div>
-                    Live Games
-                  </div>
-                  {activeTab === 'live' && (
-                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent"></div>
-                  )}
-                </button>
-                <button
-                  onClick={() => setActiveTab('upcoming')}
-                  className={`pb-3 px-1 font-medium transition-colors relative ${
-                    activeTab === 'upcoming' 
-                      ? 'text-accent' 
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4" />
-                    Upcoming
-                  </div>
-                  {activeTab === 'upcoming' && (
-                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent"></div>
-                  )}
-                </button>
+              {activeTab === 'live' && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent"></div>
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab('upcoming')}
+              className={`pb-3 px-1 font-medium transition-colors relative ${
+                activeTab === 'upcoming' 
+                  ? 'text-accent' 
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4" />
+                Upcoming
+              </div>
+              {activeTab === 'upcoming' && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent"></div>
+              )}
+            </button>
                 <button
                   onClick={() => setActiveTab('my-bets')}
                   className={`pb-3 px-1 font-medium transition-colors relative ${
@@ -602,14 +614,21 @@ const Dashboard = () => {
                     <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent"></div>
                   )}
                 </button>
-              </div>
+          </div>
 
-              {/* Games List */}
-              <div className="space-y-8">
+          {/* Games List */}
+          <div className="space-y-8">
+            {!loadingGames && activeTab === 'live' && liveGames.length === 0 && (
+              <Card className="border-border/60 bg-card">
+                <CardContent className="p-8 text-center">
+                  <p className="text-muted-foreground">No live games available at the moment.</p>
+                </CardContent>
+              </Card>
+            )}
             {activeTab === 'live' && liveGames.map((game) => {
               const userBet = userBetsByGame[game.id];
               return (
-              <Card key={game.id} className="overflow-hidden border-border/50 hover:border-accent/30 hover-lift bg-card animate-fade-up-delay-3">
+              <Card key={game.id} className="overflow-hidden border-border/50 hover:border-accent/30 hover-lift bg-card animate-fade-up-delay-3 glow-border transition-all duration-300">
                 <CardContent className="p-0">
                   {/* Game Header */}
                   <div className="bg-red-500/10 border-b border-red-500/20 px-6 py-3">
@@ -630,14 +649,12 @@ const Dashboard = () => {
                   </div>
 
                   {/* Teams and Scores */}
-                  <div className="p-6">
+                  <div className="p-6 relative z-10">
                     <div className="grid grid-cols-3 gap-8 items-center">
                       {/* Team 1 */}
-                      <div className="text-center">
+                      <div className="text-center relative z-10">
                         <h3 className="text-lg font-semibold mb-2">{game.team1}</h3>
-                        <div className="text-3xl font-bold mb-3">{game.score1}</div>
                         <div className="space-y-3">
-                          <div className="text-sm text-muted-foreground">Odds: {game.odds1}</div>
                           {userBet && (
                             <div className="text-xs text-accent mb-2 space-y-1 p-2 rounded bg-accent/10 border border-accent/20">
                               <div>Your bets: ${userBet.totalAmount.toFixed(2)}</div>
@@ -646,8 +663,15 @@ const Dashboard = () => {
                             </div>
                           )}
                           <Button 
-                            onClick={() => handleBet(game.id, game.team1)}
-                            className="w-full bg-accent hover:bg-accent/80 text-black font-semibold"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleBet(game.id, game.team1, e);
+                            }}
+                            className="w-full btn-gold gold-glow font-semibold transition-all hover:scale-105 cursor-pointer relative z-20"
+                            type="button"
+                            disabled={false}
+                            style={{ pointerEvents: 'auto' }}
                           >
                             <Zap className="w-4 h-4 mr-2" />
                             {userBet ? "Bet Again" : "Bet Now"}
@@ -666,11 +690,9 @@ const Dashboard = () => {
                       </div>
 
                       {/* Team 2 */}
-                      <div className="text-center">
+                      <div className="text-center relative z-10">
                         <h3 className="text-lg font-semibold mb-2">{game.team2}</h3>
-                        <div className="text-3xl font-bold mb-3">{game.score2}</div>
                         <div className="space-y-3">
-                          <div className="text-sm text-muted-foreground">Odds: {game.odds2}</div>
                           {userBet && (
                             <div className="text-xs text-accent mb-2 space-y-1 p-2 rounded bg-accent/10 border border-accent/20">
                               <div>Your bets: ${userBet.totalAmount.toFixed(2)}</div>
@@ -679,8 +701,15 @@ const Dashboard = () => {
                             </div>
                           )}
                           <Button 
-                            onClick={() => handleBet(game.id, game.team2)}
-                            className="w-full bg-accent hover:bg-accent/80 text-black font-semibold"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleBet(game.id, game.team2, e);
+                            }}
+                            className="w-full btn-gold gold-glow font-semibold transition-all hover:scale-105 cursor-pointer relative z-20"
+                            type="button"
+                            disabled={false}
+                            style={{ pointerEvents: 'auto' }}
                           >
                             <Zap className="w-4 h-4 mr-2" />
                             {userBet ? "Bet Again" : "Bet Now"}
@@ -703,7 +732,7 @@ const Dashboard = () => {
             {!loadingGames && activeTab === 'upcoming' && upcomingGames.map((game) => {
               const userBet = userBetsByGame[game.id];
               return (
-              <Card key={game.id} className="border-border/60 hover-border-border transition-all hover-lift bg-card">
+              <Card key={game.id} className="border-border/60 hover:border-accent/30 transition-all hover-lift bg-card glow-border animate-fade-up-delay-3">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-4">
                     <Badge className="bg-accent/20 text-accent border-accent/30">
@@ -712,9 +741,9 @@ const Dashboard = () => {
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <Clock className="w-4 h-4" />
                       <span>
-                        {game.campaign_start_at
+                      {game.campaign_start_at 
                           ? `Starts: ${formatDateTime(game.campaign_start_at)}`
-                          : "Upcoming"}
+                        : "Upcoming"}
                         {game.campaign_end_at && (
                           <> • Ends: ${formatDateTime(game.campaign_end_at)}</>
                         )}
@@ -726,7 +755,6 @@ const Dashboard = () => {
                     {/* Team 1 */}
                     <div className="text-center">
                       <h3 className="text-lg font-semibold mb-2">{game.team1}</h3>
-                      <div className="text-xl text-muted-foreground mb-3">{game.odds1}</div>
                       {userBet && (
                         <div className="text-xs text-accent mb-2 space-y-1 p-2 rounded bg-accent/10 border border-accent/20">
                           <div>Your bets: ${userBet.totalAmount.toFixed(2)}</div>
@@ -752,7 +780,6 @@ const Dashboard = () => {
                     {/* Team 2 */}
                     <div className="text-center">
                       <h3 className="text-lg font-semibold mb-2">{game.team2}</h3>
-                      <div className="text-xl text-muted-foreground mb-3">{game.odds2}</div>
                       {userBet && (
                         <div className="text-xs text-accent mb-2 space-y-1 p-2 rounded bg-accent/10 border border-accent/20">
                           <div>Your bets: ${userBet.totalAmount.toFixed(2)}</div>
@@ -791,7 +818,7 @@ const Dashboard = () => {
                         ? new Date(bet.games.campaign_end_at) < now 
                         : false;
                       return (
-                      <Card key={bet.id} className="border-border/60 bg-card hover-lift animate-fade-up-delay-2">
+                      <Card key={bet.id} className="border-border/60 bg-card hover-lift animate-fade-up-delay-2 glow-border transition-all duration-300">
                         <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                           <div>
                             <p className="font-semibold">{bet.games?.title || `Game #${bet.game_id}`}</p>
@@ -865,12 +892,6 @@ const Dashboard = () => {
                       {selectedTeam === "team1" ? selectedGame.team1 : selectedGame.team2}
                     </span>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Odds:</span>
-                    <span className="font-semibold">
-                      {selectedTeam === "team1" ? selectedGame.odds1 : selectedGame.odds2}
-                    </span>
-                  </div>
                 </div>
               </div>
 
@@ -912,9 +933,9 @@ const Dashboard = () => {
                     </div>
                     <div className="text-xs text-muted-foreground mt-2 pt-2 border-t border-border/60">
                       * Payout is calculated at 1.5x your bet amount if you win
-                    </div>
-                  </div>
-                </div>
+          </div>
+        </div>
+      </div>
               )}
             </div>
           )}
@@ -935,7 +956,7 @@ const Dashboard = () => {
             </Button>
             <Button
               onClick={confirmBet}
-              className="bg-accent hover:bg-accent/80 text-black"
+              className="btn-gold gold-glow transition-all hover:scale-105"
               disabled={placingBet || !betAmount || isNaN(parseFloat(betAmount)) || parseFloat(betAmount) <= 0}
             >
               {placingBet ? (

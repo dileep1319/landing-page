@@ -13,4 +13,11 @@ if (!supabaseUrl.startsWith("https://")) {
   throw new Error("Invalid VITE_SUPABASE_URL: must start with https://");
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    // Keep user logged in across refreshes and normal navigation.
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+  },
+});

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
+import { logoutIfStale, touchLastSeen } from "@/lib/sessionTimeout";
 import Navbar from "@/components/landing/Navbar";
 import HeroSection from "@/components/landing/HeroSection";
 import TimelineSection from "@/components/landing/TimelineSection";
@@ -19,8 +20,10 @@ const Index = () => {
   useEffect(() => {
     // Check if user is already authenticated and redirect to appropriate dashboard
     const checkAuth = async () => {
+      await logoutIfStale(supabase);
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
+        touchLastSeen();
         const role = user.user_metadata?.role;
         if (role === "super_admin") {
           navigate('/admin');

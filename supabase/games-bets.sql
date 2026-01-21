@@ -7,14 +7,13 @@ CREATE TABLE IF NOT EXISTS public.games (
   title TEXT NOT NULL,                 -- e.g. "Chiefs vs Bills"
   team1 TEXT NOT NULL,
   team2 TEXT NOT NULL,
-  odds1 TEXT NOT NULL,
-  odds2 TEXT NOT NULL,
   league TEXT,
   status TEXT NOT NULL DEFAULT 'upcoming',   -- 'upcoming' | 'live' | 'finished'
   game_start_at TIMESTAMPTZ,                -- actual game start time
   campaign_start_at TIMESTAMPTZ,            -- when betting campaign opens
   campaign_end_at TIMESTAMPTZ,              -- when betting campaign closes
   winner TEXT,                              -- 'team1' | 'team2' | 'draw' | null
+  finished_at TIMESTAMPTZ,                  -- when game was finished and winner declared
   created_by BIGINT,                        -- users.id of super_admin who created it
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
