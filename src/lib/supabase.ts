@@ -15,9 +15,7 @@ if (!supabaseUrl.startsWith("https://")) {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    // Keep user logged in across refreshes within the same tab only.
     persistSession: true,
-    storage: window.sessionStorage, // Use sessionStorage instead of localStorage
     autoRefreshToken: true,
     detectSessionInUrl: true,
   },
