@@ -7,7 +7,7 @@ const HeroSection = () => {
       <div className="absolute inset-0 bg-gradient-to-b from-background via-background to-secondary/20" />
       
       <div className="container mx-auto px-6 py-32 relative z-10">
-        <div className="max-w-4xl mx-auto text-center">
+        <div className="max-w-5xl mx-auto text-center">
           <div className="animate-fade-up">
             <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-border text-sm text-muted-foreground mb-8">
               <Sparkles className="w-4 h-4 text-accent" />
@@ -16,11 +16,10 @@ const HeroSection = () => {
           </div>
           
           <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-none mb-8 animate-fade-up-delay-1">
-            <div className="block">
-              Win{" "}
-              <span className="shimmer-text">Mega Cashback</span>
+            <div className="block whitespace-nowrap">
+              Win <span className="shimmer-text">Mega Cashback</span>
             </div>
-            <div className="block">
+            <div className="block whitespace-nowrap">
               This Super Bowl
             </div>
           </h1>
