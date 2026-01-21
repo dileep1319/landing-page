@@ -329,6 +329,17 @@ const AdminDashboard = () => {
   };
 
   const handleSetWinner = async (gameId: number, winner: 'team1' | 'team2') => {
+    const { data: gameData, error: gameFetchError } = await supabase
+      .from("games")
+      .select("odds1, odds2, status")
+      .eq("id", gameId)
+      .single();
+
+    if (gameFetchError || !gameData) {
+      toast.error(`Failed to load game odds: ${gameFetchError?.message || "Unknown error"}`);
+      return;
+    }
+
     const { error } = await supabase
       .from("games")
       .update({
