@@ -329,17 +329,6 @@ const AdminDashboard = () => {
   };
 
   const handleSetWinner = async (gameId: number, winner: 'team1' | 'team2') => {
-    const { data: gameData, error: gameFetchError } = await supabase
-      .from("games")
-      .select("odds1, odds2, status")
-      .eq("id", gameId)
-      .single();
-
-    if (gameFetchError || !gameData) {
-      toast.error(`Failed to load game odds: ${gameFetchError?.message || "Unknown error"}`);
-      return;
-    }
-
     const { error } = await supabase
       .from("games")
       .update({
@@ -370,25 +359,9 @@ const AdminDashboard = () => {
         let payout = 0;
 
         if (won) {
-          // Calculate payout based on odds
-          // Odds format: "+150" means win $150 on $100 bet, "-120" means bet $120 to win $100
-          const oddsStr = winner === "team1" ? gameData.odds1 : gameData.odds2;
+          // MVP reward: no odds column in DB. Use fixed multiplier.
           const betAmount = Number(bet.amount);
-
-          // Parse odds
-          if (oddsStr.startsWith('+')) {
-            // Positive odds: +150 means you win $150 on a $100 bet
-            const oddsValue = parseFloat(oddsStr.substring(1));
-            payout = betAmount + (betAmount * oddsValue / 100);
-          } else if (oddsStr.startsWith('-')) {
-            // Negative odds: -120 means you bet $120 to win $100
-            const oddsValue = parseFloat(oddsStr.substring(1));
-            payout = betAmount + (betAmount * 100 / oddsValue);
-          } else {
-            // Decimal odds (e.g., "1.5")
-            const oddsValue = parseFloat(oddsStr);
-            payout = betAmount * oddsValue;
-          }
+          payout = betAmount * 1.5;
 
           wonBetsCount++;
           totalPayout += payout;
@@ -732,7 +705,7 @@ const AdminDashboard = () => {
                     <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
                       <Calendar className="w-4 h-4" />
                       <span>
-                        Campaign: {game.campaign_start_at ? new Date(game.campaign_start_at).toLocaleString() : "Not set"} - {game.campaign_end_at ? new Date(game.campaign_end_at).toLocaleString() : "Not set"}
+                        Campaign: {game.campaign_start_at ? format(new Date(game.campaign_start_at), "MMM dd, yyyy hh:mm a") : "Not set"} - {game.campaign_end_at ? format(new Date(game.campaign_end_at), "MMM dd, yyyy hh:mm a") : "Not set"}
                       </span>
                     </div>
 
