@@ -31,7 +31,9 @@ import {
   Ticket,
   TrendingUp,
   TrendingDown,
-  Banknote
+  Banknote,
+  Eye,
+  Trash2
 } from "lucide-react";
 
 type Game = {
@@ -838,38 +840,229 @@ const AdminDashboard = () => {
 
         {/* Users Tab */}
         {activeTab === 'users' && (
-          <div className="space-y-4 animate-fade-up-delay-2">
-            <h2 className="text-2xl font-bold tracking-tight">All Users</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {allUsers.map((user) => (
-                <Card key={user.id} className="border-border/60 bg-card hover-lift animate-fade-up-delay-3 glow-border transition-all duration-300">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div>
-                        <p className="font-semibold">{user.name}</p>
-                        <p className="text-sm text-muted-foreground">@{user.username}</p>
-                      </div>
-                      <Badge
-                        className={
-                          user.role === "super_admin"
-                            ? "bg-red-500/20 text-red-400 border-red-500/30"
-                            : "bg-accent/20 text-accent border-accent/30"
-                        }
-                      >
-                        {user.role === "super_admin" ? "Admin" : "User"}
-                      </Badge>
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      Joined: {new Date(user.created_at).toLocaleDateString()}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+          <div className="space-y-6 animate-fade-up-delay-2">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold tracking-tight">User Management</h2>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" className="border-border/60 hover:border-accent">
+                  <Users className="w-4 h-4 mr-2" />
+                  Export Users
+                </Button>
+                <Button className="btn-gold gold-glow text-sm" size="sm">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add User
+                </Button>
+              </div>
             </div>
+
+            {/* Users Stats Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Card className="p-5 border-border bg-card hover-lift animate-fade-up-delay-1 glow-border transition-all duration-300">
+                <CardContent className="p-0">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400">
+                      <Users className="w-5 h-5" />
+                    </div>
+                    <span className="text-[10px] text-muted-foreground font-bold bg-secondary px-2 py-0.5 rounded uppercase">Total</span>
+                  </div>
+                  <h3 className="text-muted-foreground text-xs font-semibold uppercase tracking-wider">All Users</h3>
+                  <div className="flex items-baseline justify-between mt-1">
+                    <p className="text-2xl font-bold text-foreground">{allUsers.length}</p>
+                    <span className="text-blue-400 text-xs font-medium">Active</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="p-5 border-border bg-card hover-lift animate-fade-up-delay-1 glow-border transition-all duration-300">
+                <CardContent className="p-0">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center text-accent">
+                      <User className="w-5 h-5" />
+                    </div>
+                    <span className="text-[10px] text-muted-foreground font-bold bg-secondary px-2 py-0.5 rounded uppercase">Regular</span>
+                  </div>
+                  <h3 className="text-muted-foreground text-xs font-semibold uppercase tracking-wider">Regular Users</h3>
+                  <div className="flex items-baseline justify-between mt-1">
+                    <p className="text-2xl font-bold text-foreground">{allUsers.filter(u => u.role !== 'super_admin').length}</p>
+                    <span className="text-green-400 text-xs font-medium">Normal</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="p-5 border-red-400/30 bg-card hover-lift animate-fade-up-delay-1 shadow-[0_0_20px_rgba(239,68,68,0.05)] glow-border transition-all duration-300">
+                <CardContent className="p-0">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center text-red-400">
+                      <Settings className="w-5 h-5" />
+                    </div>
+                    <span className="text-[10px] text-red-400 font-bold bg-red-400/10 px-2 py-0.5 rounded uppercase">Admin</span>
+                  </div>
+                  <h3 className="text-muted-foreground text-xs font-semibold uppercase tracking-wider">Admin Users</h3>
+                  <div className="flex items-baseline justify-between mt-1">
+                    <p className="text-2xl font-bold text-red-400">{allUsers.filter(u => u.role === 'super_admin').length}</p>
+                    <span className="text-red-400 text-xs font-medium">Elevated</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="p-5 border-border bg-card hover-lift animate-fade-up-delay-1 glow-border transition-all duration-300">
+                <CardContent className="p-0">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center text-green-400">
+                      <TrendingUp className="w-5 h-5" />
+                    </div>
+                    <span className="text-[10px] text-muted-foreground font-bold bg-secondary px-2 py-0.5 rounded uppercase">New</span>
+                  </div>
+                  <h3 className="text-muted-foreground text-xs font-semibold uppercase tracking-wider">New This Week</h3>
+                  <div className="flex items-baseline justify-between mt-1">
+                    <p className="text-2xl font-bold text-foreground">{
+                      allUsers.filter(u => {
+                        const joinDate = new Date(u.created_at);
+                        const weekAgo = new Date();
+                        weekAgo.setDate(weekAgo.getDate() - 7);
+                        return joinDate > weekAgo;
+                      }).length
+                    }</p>
+                    <span className="text-green-400 text-xs font-medium">Fresh</span>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Users List */}
+            <div className="space-y-6">
+              {/* Admin Users Section */}
+              {allUsers.filter(u => u.role === 'super_admin').length > 0 && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center">
+                      <Settings className="w-4 h-4 text-red-400" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-red-400">Admin Users</h3>
+                    <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-xs">
+                      {allUsers.filter(u => u.role === 'super_admin').length} Admins
+                    </Badge>
+                  </div>
+                  <div className="space-y-4">
+                    {allUsers.filter(u => u.role === 'super_admin').map((user) => (
+                      <Card key={user.id} className="border-red-400/30 hover:border-red-400/50 bg-card hover-lift animate-fade-up-delay-3 glow-border transition-all duration-300 shadow-[0_0_20px_rgba(239,68,68,0.05)]">
+                        <CardContent className="p-6">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                              {/* Admin Avatar */}
+                              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-red-500/20 to-red-500/10 border border-red-400/30 flex items-center justify-center">
+                                <Settings className="w-6 h-6 text-red-400" />
+                              </div>
+                              
+                              {/* Admin Info */}
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <h3 className="text-lg font-semibold">{user.name}</h3>
+                                  <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-xs">
+                                    Super Admin
+                                  </Badge>
+                                </div>
+                                <p className="text-sm text-muted-foreground">@{user.username}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  Joined {format(new Date(user.created_at), "MMM dd, yyyy")}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Admin Actions */}
+                            <div className="flex items-center gap-2">
+                              <Button variant="ghost" size="sm" className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10">
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm" className="text-green-400 hover:text-green-300 hover:bg-green-500/10">
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm" className="text-yellow-400 hover:text-yellow-300 hover:bg-yellow-500/10">
+                                <Settings className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Regular Users Section */}
+              {allUsers.filter(u => u.role !== 'super_admin').length > 0 && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
+                      <User className="w-4 h-4 text-accent" />
+                    </div>
+                    <h3 className="text-lg font-semibold">Regular Users</h3>
+                    <Badge className="bg-accent/20 text-accent border-accent/30 text-xs">
+                      {allUsers.filter(u => u.role !== 'super_admin').length} Users
+                    </Badge>
+                  </div>
+                  <div className="space-y-4">
+                    {allUsers.filter(u => u.role !== 'super_admin').map((user, index) => (
+                      <Card key={user.id} className="border-border/60 hover:border-accent/30 hover-lift bg-card animate-fade-up-delay-3 glow-border transition-all duration-300">
+                        <CardContent className="p-6">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                              {/* User Avatar */}
+                              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-accent/20 to-accent/10 border border-accent/30 flex items-center justify-center">
+                                <User className="w-6 h-6 text-accent" />
+                              </div>
+                              
+                              {/* User Info */}
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <h3 className="text-lg font-semibold">{user.name}</h3>
+                                  <Badge className="bg-accent/20 text-accent border-accent/30 text-xs">
+                                    User
+                                  </Badge>
+                                </div>
+                                <p className="text-sm text-muted-foreground">@{user.username}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  Joined {format(new Date(user.created_at), "MMM dd, yyyy")}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Admin Actions */}
+                            <div className="flex items-center gap-2">
+                              <Button variant="ghost" size="sm" className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10">
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm" className="text-green-400 hover:text-green-300 hover:bg-green-500/10">
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm" className="text-yellow-400 hover:text-yellow-300 hover:bg-yellow-500/10">
+                                <Settings className="w-4 h-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm" className="text-red-400 hover:text-red-300 hover:bg-red-500/10">
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
             {allUsers.length === 0 && (
               <Card className="border-border/60 bg-card">
-                <CardContent className="p-8 text-center">
-                  <p className="text-muted-foreground">No users found.</p>
+                <CardContent className="p-12 text-center">
+                  <div className="w-16 h-16 rounded-full bg-secondary/20 flex items-center justify-center mx-auto mb-4">
+                    <Users className="w-8 h-8 text-muted-foreground" />
+                  </div>
+                  <h3 className="text-lg font-semibold mb-2">No Users Found</h3>
+                  <p className="text-muted-foreground mb-4">Start by inviting users to join your platform</p>
+                  <Button className="btn-gold gold-glow">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add First User
+                  </Button>
                 </CardContent>
               </Card>
             )}

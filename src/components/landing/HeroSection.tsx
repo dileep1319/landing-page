@@ -33,7 +33,7 @@ const HeroSection = () => {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-up-delay-3">
             <button
               className="px-8 py-4 btn-gold gold-glow font-semibold rounded-full"
-              onClick={() => window.dispatchEvent(new Event("open-registration"))}
+              onClick={() => window.dispatchEvent(new Event("open-signin"))}
             >
               Start Betting
             </button>

@@ -16,7 +16,7 @@ const CTASection = () => {
             </p>
             <button
               className="px-8 py-4 btn-gold gold-glow font-semibold rounded-full pulse-glow"
-              onClick={() => window.dispatchEvent(new Event("open-registration"))}
+              onClick={() => window.dispatchEvent(new Event("open-signin"))}
             >
               Start Now
             </button>
